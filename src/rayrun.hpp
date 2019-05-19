@@ -25,7 +25,7 @@ public:
     // 以下テストベット側で使用する変数
     float reserve[16];
 };
-static_assert(sizeof(Ray) == 144);
+static_assert(sizeof(Ray) == 128);
 
 // メッシュの生成
 extern "C" __declspec(dllexport) void preprocess(
