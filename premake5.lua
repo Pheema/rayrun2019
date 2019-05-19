@@ -3,7 +3,8 @@ solution "rayrun"
 	location "generated"
 	configurations { "Debug", "Release" }
 	platforms {"x64"}
-
+	buildoptions { "/MP" }
+	
 -- 
 project "rayrun"
 	kind "ConsoleApp"
@@ -20,8 +21,14 @@ project "rayrun"
 	}
 	cppdialect "C++17"
 	dependson { "refimp" }
+	debugargs { "refimp", "../asset/hairball.json" }
+	buildoptions { "/openmp" }
+	filter "Release"
+		optimize "Speed"
 
--- 
+	filter {}
+
+	-- 
 project "refimp"
 	kind "SharedLib"
 	language "C++"
@@ -31,3 +38,7 @@ project "refimp"
 		"src/rayrun.hpp",
 	}
 	cppdialect "C++17"
+	filter "Release"
+		optimize "Speed"
+
+	filter {}
