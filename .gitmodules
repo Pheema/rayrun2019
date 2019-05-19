@@ -7,3 +7,6 @@
 [submodule "thirdparty/tinyobjloader"]
 	path = thirdparty/tinyobjloader
 	url = https://github.com/syoyo/tinyobjloader.git
+[submodule "thirdparty/benchmark"]
+	path = thirdparty/benchmark
+	url = https://github.com/google/benchmark.git

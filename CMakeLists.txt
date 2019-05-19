@@ -31,5 +31,14 @@ target_compile_features(rayrun PUBLIC cxx_std_17)
 find_package(OpenMP)
 target_link_libraries(rayrun PRIVATE refimpl OpenMP::OpenMP_CXX)
 
+# ---- rayrunbenchmark ----
+option(BENCHMARK_ENABLE_TESTING "" OFF)
+option(BENCHMARK_ENABLE_INSTALL "" OFF)
+option(BENCHMARK_ENABLE_GTEST_TESTS "" OFF)
+add_subdirectory(thirdparty/benchmark)
+add_executable(rayrunbenchmark "src/benchmark/main.cpp")
+target_link_libraries(rayrunbenchmark PRIVATE benchmark)
+target_include_directories(rayrunbenchmark PRIVATE benchmark)
+
 # Set the startup project
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT rayrun)
