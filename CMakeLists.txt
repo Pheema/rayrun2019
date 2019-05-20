@@ -17,8 +17,13 @@ target_compile_features(refimpl PUBLIC cxx_std_17)
 
 # ---- myimpl ----
 add_library(myimpl SHARED)
-target_sources(myimpl PRIVATE "mysrc/impl/myimpl.cpp" PUBLIC "src/rayrun.hpp")
-target_include_directories(myimpl PRIVATE "src")
+target_sources(myimpl
+               PRIVATE
+               "mysrc/impl/myimpl.cpp"
+               "mysrc/impl/vector3f.h"
+               PUBLIC
+               "src/rayrun.hpp")
+target_include_directories(myimpl PRIVATE "src" INTERFACE "mysrc/impl")
 target_compile_features(myimpl PUBLIC cxx_std_17)
 
 # ---- rayrun ----
@@ -37,14 +42,14 @@ target_compile_features(rayrun PUBLIC cxx_std_17)
 find_package(OpenMP)
 target_link_libraries(rayrun PRIVATE myimpl OpenMP::OpenMP_CXX)
 
-# ---- rayrunbenchmark ----
+# ---- mybenchmark ----
 option(BENCHMARK_ENABLE_TESTING "" OFF)
 option(BENCHMARK_ENABLE_INSTALL "" OFF)
 option(BENCHMARK_ENABLE_GTEST_TESTS "" OFF)
 add_subdirectory(thirdparty/benchmark)
-add_executable(rayrunbenchmark "mysrc/benchmark/main.cpp")
-target_link_libraries(rayrunbenchmark PRIVATE benchmark)
-target_include_directories(rayrunbenchmark PRIVATE benchmark)
+add_executable(mybenchmark)
+target_sources(mybenchmark PRIVATE "mysrc/benchmark/benchmark_vector3f.cpp")
+target_link_libraries(mybenchmark PRIVATE myimpl benchmark benchmark_main)
 
 # Set the startup project
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT rayrun)
