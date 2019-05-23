@@ -21,6 +21,9 @@ target_sources(myimpl
                PRIVATE
                "mysrc/impl/myimpl.cpp"
                "mysrc/impl/vector3f.h"
+               "mysrc/impl/binnedBVH.h"
+               "mysrc/impl/binnedBVH.cpp"
+               "mysrc/impl/aabb.h"
                PUBLIC
                "src/rayrun.hpp")
 target_include_directories(myimpl PRIVATE "src" INTERFACE "mysrc/impl")
