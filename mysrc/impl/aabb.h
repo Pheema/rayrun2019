@@ -39,6 +39,21 @@ public:
         m_upper = MaxElements(m_upper, point);
     }
 
+    bool
+    Contains(const Vector3f& point) const
+    {
+        // clang-format off
+        if (m_lower.x < point.x && point.x < m_upper.x &&
+            m_lower.y < point.y && point.y < m_upper.y &&
+            m_lower.z < point.z && point.z < m_upper.z)
+        {
+            return true;
+        }
+        // clang-format on
+
+        return false;
+    }
+
     int
     GetWidestAxis() const
     {
