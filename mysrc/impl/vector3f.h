@@ -19,12 +19,6 @@ struct Vector3f
     {
     }
 
-    static constexpr Vector3f
-    One()
-    {
-        return Vector3f(1.0f, 1.0f, 1.0f);
-    }
-
     constexpr float operator[](int i) const
     {
         assert(0 <= i && i < 3);
@@ -32,6 +26,15 @@ struct Vector3f
     }
 
     constexpr float& operator[](int i) { return *(&x + i); }
+
+    constexpr float
+    Vector3f::SquaredLength() const;
+
+    static constexpr Vector3f
+    One()
+    {
+        return Vector3f(1.0f, 1.0f, 1.0f);
+    }
 
     float x = 0.0f;
     float y = 0.0f;
@@ -89,4 +92,24 @@ MaxElements(const Vector3f& v0, const Vector3f& v1)
 {
     return Vector3f(
       std::max(v0.x, v1.x), std::max(v0.x, v1.x), std::max(v0.z, v1.z));
+}
+
+constexpr float
+Dot(const Vector3f& v0, const Vector3f& v1)
+{
+    return v0.x * v1.x + v0.y * v1.y + v0.z * v1.z;
+}
+
+constexpr Vector3f
+Cross(const Vector3f& v0, const Vector3f& v1)
+{
+    return Vector3f(v0.y * v1.z - v0.z * v1.y,
+                    v0.z * v1.x - v0.x * v1.z,
+                    v0.x * v1.y - v0.y * v1.x);
+}
+
+constexpr float
+Vector3f::SquaredLength() const
+{
+    return Dot(*this, *this);
 }

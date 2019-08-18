@@ -29,28 +29,43 @@ Scene::Build(const float* vertices,
     }
 
     // 頂点インデックス
-    m_vertexIndices.clear();
-    m_vertexIndices.resize(numFaces);
+    m_vertexIndicesInFace.clear();
+    m_vertexIndicesInFace.resize(numFaces);
     m_normalIndices.clear();
     m_normalIndices.resize(numFaces);
     for (size_t idxFace = 0; idxFace < numFaces; idxFace++)
     {
         const size_t offset = idxFace * 6;
-        m_vertexIndices[idxFace] = { indices[offset + 0],
-                                     indices[offset + 2],
-                                     indices[offset + 4] };
+        m_vertexIndicesInFace[idxFace] = { indices[offset + 0],
+                                           indices[offset + 2],
+                                           indices[offset + 4] };
         m_normalIndices[idxFace] = { indices[offset + 1],
                                      indices[offset + 3],
                                      indices[offset + 5] };
     }
 
     m_accel = BinnedBVH();
-    m_accel.Build(m_vertexIndices, m_vertexPositions);
+    m_accel.Build(*this);
 }
 
-std::optional<HitInfo>
+std::optional<ShadingInfo>
 Scene::Intersect(const Ray& ray)
 {
-    // #TODO: 実装
-    return std::nullopt;
+    const RayInternal rayInternal = [&] {
+        RayInternal r{};
+        r.o = Vector3f(ray.pos[0], ray.pos[1], ray.pos[2]);
+        r.dir = Vector3f(ray.dir[0], ray.dir[1], ray.dir[2]);
+        return r;
+    }();
+
+    // #TODO: std::optional<ShadingInfo> を返す
+    auto hitInfo = m_accel.Intersect(rayInternal, *this, ray.tnear, ray.tfar);
+    if (!hitInfo)
+    {
+        return std::nullopt;
+    }
+
+    ShadingInfo shadingInfo;
+    shadingInfo.position = rayInternal.o + rayInternal.dir * hitInfo->distance;
+    return shadingInfo;
 }

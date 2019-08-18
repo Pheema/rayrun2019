@@ -23,13 +23,17 @@ target_compile_features(refimpl PUBLIC cxx_std_17)
 add_library(myimpl SHARED)
 target_sources(myimpl
                PRIVATE
-               "mysrc/impl/myimpl.cpp"
                "mysrc/impl/vector3f.h"
+               "mysrc/impl/myimpl.cpp"
                "mysrc/impl/scene.h"
                "mysrc/impl/scene.cpp"
                "mysrc/impl/binnedBVH.h"
                "mysrc/impl/binnedBVH.cpp"
                "mysrc/impl/aabb.h"
+               "mysrc/impl/intersection.h"
+               "mysrc/impl/intersection.cpp"
+               "mysrc/impl/hitInfo.h"
+               "mysrc/impl/rayInternal.h"
                PUBLIC
                "src/rayrun.hpp")
 target_include_directories(myimpl PRIVATE "src" INTERFACE "mysrc/impl")

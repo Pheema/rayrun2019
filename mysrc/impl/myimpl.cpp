@@ -50,7 +50,7 @@ intersect(Ray* rays, size_t numRay, [[maybe_unused]] bool hitany)
             continue;
         }
 
-        const uint32_t idxFace = hitInfo->idxFace;
+        // const uint32_t idxFace = hitInfo->idxFace;
 
         // #TODO: 交差した三角形の情報を元にして交差位置と法線を補間
 

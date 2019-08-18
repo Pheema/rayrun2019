@@ -1,6 +1,8 @@
 #pragma once
 
 #include "aabb.h"
+#include "hitInfo.h"
+#include "rayInternal.h"
 #include "rayrun.hpp"
 #include <array>
 #include <cstdint>
@@ -8,18 +10,7 @@
 #include <tuple>
 #include <vector>
 
-// #TODO: あとで別ファイルに移す
-struct RayInternal
-{
-    Vector3f o;
-    Vector3f dir;
-};
-
-//! BVHノードにヒットした際の情報
-struct BVHNodeHitInfo
-{
-    float distance = std::numeric_limits<float>::max();
-};
+class Scene;
 
 class BinnedBVH
 {
@@ -49,7 +40,7 @@ private:
         {
         }
 
-        std::optional<BVHNodeHitInfo>
+        std::optional<SimpleHitInfo>
         Intersect(const RayInternal& ray) const;
 
         //! 子のノードインデックスを取得
@@ -98,6 +89,12 @@ private:
             return m_boundary.GetCentroid();
         }
 
+        bool
+        Contains(Vector3f point) const
+        {
+            return m_boundary.Contains(point);
+        }
+
     private:
         AABB m_boundary;
         std::array<uint32_t, 2> m_childIndicies{ 0, 0 };
@@ -119,12 +116,14 @@ public:
 
     //! BVHの構築
     void
-    Build(const std::vector<std::array<uint32_t, 3>> vertexIndicesInFace,
-          const std::vector<Vector3f>& vertexPositions);
+    Build(const Scene& scene);
 
     //! レイとBVHの交差判定
-    std::optional<Ray>
-    Intersect(Ray* rays, size_t numRay, bool hitany);
+    std::optional<HitInfo>
+    Intersect(const RayInternal& ray,
+              const Scene& scene,
+              float distMin,
+              float distMax);
 
 private:
     //!

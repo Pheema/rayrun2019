@@ -1,9 +1,11 @@
 #include "binnedBVH.h"
 
+#include "intersection.h"
+#include "scene.h"
 #include <numeric>
 #include <stack>
 
-std::optional<BVHNodeHitInfo>
+std::optional<SimpleHitInfo>
 BinnedBVH::BVHNode::Intersect(const RayInternal& ray) const
 {
     const Vector3f invRayDir = Vector3f::One() / ray.dir;
@@ -47,20 +49,18 @@ BinnedBVH::BVHNode::Intersect(const RayInternal& ray) const
         }
     }
 
-    const BVHNodeHitInfo hitInfo = [&] {
-        BVHNodeHitInfo x;
-        x.distance = distance;
-        return x;
+    const SimpleHitInfo hitInfo = [&] {
+        SimpleHitInfo h;
+        h.distance = distance;
+        return h;
     }();
     return hitInfo;
 }
 
 void
-BinnedBVH::Build(
-  const std::vector<std::array<uint32_t, 3>> vertexIndicesInFaces,
-  const std::vector<Vector3f>& vertexPositions)
+BinnedBVH::Build(const Scene& scene)
 {
-    const auto numFaces = static_cast<uint32_t>(vertexIndicesInFaces.size());
+    const auto numFaces = scene.GetNumFaces();
 
     // 事前に各面のバウンディングボックスと重心を計算しておく
     {
@@ -68,18 +68,18 @@ BinnedBVH::Build(
         m_precomputedFaceData.reserve(numFaces);
         for (uint32_t idxFace = 0; idxFace < numFaces; idxFace++)
         {
+            const auto vertexPositions = scene.GetFaceVertices(idxFace);
+
             const AABB bound = [&] {
                 AABB ret;
-                ret.Merge(vertexPositions[vertexIndicesInFaces[idxFace][0]]);
-                ret.Merge(vertexPositions[vertexIndicesInFaces[idxFace][1]]);
-                ret.Merge(vertexPositions[vertexIndicesInFaces[idxFace][2]]);
+                ret.Merge(vertexPositions[0]);
+                ret.Merge(vertexPositions[1]);
+                ret.Merge(vertexPositions[2]);
                 return ret;
             }();
 
             const Vector3f centroid =
-              (vertexPositions[vertexIndicesInFaces[idxFace][0]] +
-               vertexPositions[vertexIndicesInFaces[idxFace][1]] +
-               vertexPositions[vertexIndicesInFaces[idxFace][2]]) /
+              (vertexPositions[0] + vertexPositions[1] + vertexPositions[2]) /
               3.0f;
 
             const PrecomputedPrimitiveData data = [&] {
@@ -110,7 +110,8 @@ BinnedBVH::Build(
             return ret;
         }();
 
-        m_bvhNodes.emplace_back(rootNodeBoundary, 0, numFaces);
+        m_bvhNodes.emplace_back(
+          rootNodeBoundary, 0, static_cast<uint32_t>(numFaces));
         nodeIndexStack.emplace(static_cast<uint32_t>(m_bvhNodes.size() - 1));
     }
 
@@ -148,7 +149,7 @@ BinnedBVH::Build(
         AABB binBoundary;
         for (auto iter = iterBegin; iter != iterEnd; iter++)
         {
-            const int faceIndex = *iter;
+            const auto faceIndex = *iter;
             binBoundary.Merge(m_precomputedFaceData[faceIndex].centroid);
         }
 
@@ -173,9 +174,9 @@ BinnedBVH::Build(
             const float l = primitiveData->centroid[widestAxis] -
                             binBoundary.lower[widestAxis];
 
-            constexpr float kEps = std::numeric_limits<float>::min();
+            static const float kAlmostOne = std::nextafter(1.0f, 0.0f);
             const auto binID =
-              static_cast<int>(kNumBins * (1.0f - kEps) * l / widestEdgeLength);
+              static_cast<int>(kNumBins * kAlmostOne * l / widestEdgeLength);
             assert(binID >= 0);
             primitiveData->binID = binID;
         }
@@ -268,11 +269,111 @@ BinnedBVH::Build(
     }
 }
 
-std::optional<Ray>
-BinnedBVH::Intersect(Ray* rays, size_t numRay, bool hitany)
+std::optional<HitInfo>
+BinnedBVH::Intersect(const RayInternal& ray,
+                     const Scene& scene,
+                     float distMin,
+                     float distMax)
 {
-    // #TODO: 実装
-    return std::nullopt;
+    thread_local std::vector<uint32_t> bvhNodeIndexStack;
+    bvhNodeIndexStack.reserve(m_bvhNodes.size());
+    bvhNodeIndexStack.clear();
+    bvhNodeIndexStack.emplace_back(0);
+
+    // ---- BVHのトラバーサル ----
+    std::optional<HitInfo> finalHitInfo;
+
+    // 2つの子ノード又は子オブジェクトに対して
+    while (!bvhNodeIndexStack.empty())
+    {
+        // 葉ノードに対して
+        const auto currentNodeIndex =
+          bvhNodeIndexStack[bvhNodeIndexStack.size() - 1];
+
+        bvhNodeIndexStack.pop_back();
+        const BVHNode& currentNode = m_bvhNodes[currentNodeIndex];
+
+        const auto hitInfoNode = currentNode.Intersect(ray);
+
+        // そもそもBVHノードに当たる軌道ではない
+        if (hitInfoNode == std::nullopt)
+        {
+            continue;
+        }
+
+        // 自ノードより手前で既に衝突している
+        if (finalHitInfo && currentNode.Contains(ray.o) == false)
+        {
+            if (finalHitInfo->distance < hitInfoNode->distance)
+            {
+                continue;
+            }
+        }
+
+        if (currentNode.IsLeaf())
+        {
+            for (uint32_t i = currentNode.GetIndexBegin();
+                 i < currentNode.GetIndexEnd();
+                 i++)
+            {
+                const uint32_t faceIndex = m_faceIndicies[i];
+
+                // 同じ面との再衝突を避ける
+                if (ray.lastFaceIndex == faceIndex)
+                {
+                    continue;
+                }
+
+                const auto vertices = scene.GetFaceVertices(faceIndex);
+
+                const auto hitInfoGeometry = IntersectRayTriangle(
+                  vertices[0], vertices[1], vertices[2], ray);
+                if (hitInfoGeometry)
+                {
+                    if (hitInfoGeometry->distance < distMin ||
+                        hitInfoGeometry->distance > distMax)
+                    {
+                        continue;
+                    }
+
+                    if (finalHitInfo == std::nullopt ||
+                        hitInfoGeometry->distance < finalHitInfo->distance)
+                    {
+                        finalHitInfo = [&] {
+                            HitInfo f;
+                            f.distance = hitInfoGeometry->distance;
+                            f.faceIndex = faceIndex;
+                            return f;
+                        }();
+                    }
+                }
+            }
+        }
+        else
+        {
+            const uint32_t leftChildIndex = currentNode.GetChildIndices()[0];
+            const uint32_t rightChildIndex = currentNode.GetChildIndices()[1];
+
+            const float sqDistLeft =
+              (m_bvhNodes[leftChildIndex].GetCentroid() - ray.o)
+                .SquaredLength();
+            const float sqDistRight =
+              (m_bvhNodes[rightChildIndex].GetCentroid() - ray.o)
+                .SquaredLength();
+
+            if (sqDistLeft < sqDistRight)
+            {
+                bvhNodeIndexStack.emplace_back(leftChildIndex);
+                bvhNodeIndexStack.emplace_back(rightChildIndex);
+            }
+            else
+            {
+                bvhNodeIndexStack.emplace_back(rightChildIndex);
+                bvhNodeIndexStack.emplace_back(leftChildIndex);
+            }
+        }
+    }
+    return finalHitInfo;
 }
 
 std::pair<float, int>
