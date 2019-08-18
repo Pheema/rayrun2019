@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <vector>
 
 // #TODO: あとで別ファイルに移す
 struct RayInternal
@@ -103,12 +104,8 @@ public:
 
     //! BVHの構築
     void
-    Build(const float* vertices,
-          size_t numVerts,
-          const float* normals,
-          size_t numNormals,
-          const uint32_t* indices,
-          size_t numFace);
+    Build(const std::vector<std::array<uint32_t, 3>> vertexIndices,
+          const std::vector<Vector3f>& vertexPositions);
 
     //! レイとBVHの交差判定
     std::optional<Ray>

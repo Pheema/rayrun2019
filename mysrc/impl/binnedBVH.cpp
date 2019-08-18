@@ -53,12 +53,8 @@ BinnedBVH::Node::Intersect(const RayInternal& ray) const
 }
 
 void
-BinnedBVH::Build(const float* vertices,
-                 size_t numVerts,
-                 const float* normals,
-                 size_t numNormals,
-                 const uint32_t* indices,
-                 size_t numFace)
+BinnedBVH::Build(const std::vector<std::array<uint32_t, 3>> vertexIndices,
+                 const std::vector<Vector3f>& vertexPositions)
 {
     // #TODO: 実装
 }
