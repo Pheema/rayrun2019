@@ -4,48 +4,47 @@
 #include <algorithm>
 #include <limits>
 
-class AABB
+struct AABB
 {
-public:
-    constexpr AABB()
-      : m_lower(Vector3f::Identity() * std::numeric_limits<float>::min())
-      , m_upper(Vector3f::Identity() * std::numeric_limits<float>::max())
+    AABB()
+      : lower(Vector3f::One() * std::numeric_limits<float>::lowest())
+      , upper(Vector3f::One() * std::numeric_limits<float>::max())
     {
     }
 
-    constexpr AABB(const Vector3f& lower, const Vector3f& upper)
-      : m_lower(lower)
-      , m_upper(upper)
+    AABB(const Vector3f& lower, const Vector3f& upper)
+      : lower(lower)
+      , upper(upper)
     {
     }
 
     Vector3f
     GetCentroid() const
     {
-        return 0.5f * (m_lower + m_upper);
+        return 0.5f * (lower + upper);
     }
 
     void
     Merge(const AABB& aabb)
     {
-        m_lower = MinElements(m_lower, aabb.m_lower);
-        m_upper = MaxElements(m_upper, aabb.m_upper);
+        lower = MinElements(lower, aabb.lower);
+        upper = MaxElements(upper, aabb.upper);
     }
 
     void
     Merge(const Vector3f& point)
     {
-        m_lower = MinElements(m_lower, point);
-        m_upper = MaxElements(m_upper, point);
+        lower = MinElements(lower, point);
+        upper = MaxElements(upper, point);
     }
 
     bool
     Contains(const Vector3f& point) const
     {
         // clang-format off
-        if (m_lower.x < point.x && point.x < m_upper.x &&
-            m_lower.y < point.y && point.y < m_upper.y &&
-            m_lower.z < point.z && point.z < m_upper.z)
+        if (lower.x < point.x && point.x < upper.x &&
+            lower.y < point.y && point.y < upper.y &&
+            lower.z < point.z && point.z < upper.z)
         {
             return true;
         }
@@ -62,7 +61,7 @@ public:
 
         for (int axis = 0; axis < 3; ++axis)
         {
-            const float width = m_upper[axis] - m_lower[axis];
+            const float width = upper[axis] - lower[axis];
             if (width > widestWidth)
             {
                 widestWidth = width;
@@ -76,11 +75,10 @@ public:
     float
     GetSurfaceArea() const
     {
-        const auto diff = m_upper - m_lower;
+        const auto diff = upper - lower;
         return 2.0f * (diff.x * diff.y + diff.y * diff.z + diff.z * diff.x);
     }
 
-private:
-    Vector3f m_lower{};
-    Vector3f m_upper{};
+    Vector3f lower{};
+    Vector3f upper{};
 };

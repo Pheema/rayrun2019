@@ -7,16 +7,16 @@
 #include <optional>
 
 // #TODO: あとで別ファイルに移す
-struct HitInfo
-{
-    bool isHit = false;
-};
-
-// #TODO: あとで別ファイルに移す
 struct RayInternal
 {
     Vector3f o;
     Vector3f dir;
+};
+
+//! BVHノードにヒットした際の情報
+struct BVHNodeHitInfo
+{
+    float distance = std::numeric_limits<float>::max();
 };
 
 class BinnedBVH
@@ -25,6 +25,7 @@ private:
     //! BVHノード
     class Node
     {
+
     public:
         Node(const AABB& bounds,
              const std::array<int32_t, 2>& childIndicies,
@@ -39,11 +40,8 @@ private:
         {
         }
 
-        std::optional<HitInfo>
-        Intersect()
-        {
-            // #TODO: 実装
-        }
+        std::optional<BVHNodeHitInfo>
+        Intersect(const RayInternal& ray) const;
 
         //! 子のノードインデックスを取得
         const std::array<int, 2>&

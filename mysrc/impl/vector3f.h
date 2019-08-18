@@ -20,7 +20,7 @@ struct Vector3f
     }
 
     static constexpr Vector3f
-    Identity()
+    One()
     {
         return Vector3f(1.0f, 1.0f, 1.0f);
     }
@@ -28,23 +28,14 @@ struct Vector3f
     constexpr float operator[](int i) const
     {
         assert(0 <= i && i < 3);
-        return values[i];
+        return *(&x + i);
     }
 
-    constexpr float operator[](int i)
-    {
-        return (*const_cast<const Vector3f*>(this))[i];
-    }
+    constexpr float& operator[](int i) { return *(&x + i); }
 
-    union {
-        struct
-        {
-            float x;
-            float y;
-            float z;
-        };
-        float values[3];
-    };
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
 };
 
 constexpr Vector3f
@@ -59,6 +50,11 @@ operator-(const Vector3f& v0, const Vector3f& v1)
     return Vector3f(v0.x - v1.x, v0.y - v1.y, v0.z - v1.z);
 }
 
+constexpr Vector3f operator*(const Vector3f& v0, const Vector3f& v1)
+{
+    return Vector3f(v0.x * v1.x, v0.y * v1.y, v0.z * v1.z);
+}
+
 constexpr Vector3f operator*(const Vector3f& v, float s)
 {
     return Vector3f(s * v.x, s * v.y, s * v.z);
@@ -67,6 +63,12 @@ constexpr Vector3f operator*(const Vector3f& v, float s)
 constexpr Vector3f operator*(float s, const Vector3f& v)
 {
     return v * s;
+}
+
+constexpr Vector3f
+operator/(const Vector3f& v0, const Vector3f& v1)
+{
+    return Vector3f(v0.x / v1.x, v0.y / v1.y, v0.z / v1.z);
 }
 
 constexpr inline Vector3f
