@@ -31,6 +31,8 @@ Scene::Build(const float* vertices,
     // 頂点インデックス
     m_vertexIndices.clear();
     m_vertexIndices.resize(numFaces);
+    m_normalIndices.clear();
+    m_normalIndices.resize(numFaces);
     for (size_t idxFace = 0; idxFace < numFaces; idxFace++)
     {
         const size_t offset = idxFace * 6;

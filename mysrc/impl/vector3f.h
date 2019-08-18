@@ -71,6 +71,12 @@ operator/(const Vector3f& v0, const Vector3f& v1)
     return Vector3f(v0.x / v1.x, v0.y / v1.y, v0.z / v1.z);
 }
 
+constexpr Vector3f
+operator/(const Vector3f& v, float s)
+{
+    return v * (1.0f / s);
+}
+
 constexpr inline Vector3f
 MinElements(const Vector3f& v0, const Vector3f& v1)
 {

@@ -6,11 +6,7 @@
 
 struct AABB
 {
-    AABB()
-      : lower(Vector3f::One() * std::numeric_limits<float>::lowest())
-      , upper(Vector3f::One() * std::numeric_limits<float>::max())
-    {
-    }
+    AABB() = default;
 
     AABB(const Vector3f& lower, const Vector3f& upper)
       : lower(lower)
@@ -79,6 +75,6 @@ struct AABB
         return 2.0f * (diff.x * diff.y + diff.y * diff.z + diff.z * diff.x);
     }
 
-    Vector3f lower{};
-    Vector3f upper{};
+    Vector3f lower = Vector3f::One() * std::numeric_limits<float>::max();
+    Vector3f upper = Vector3f::One() * std::numeric_limits<float>::lowest();
 };
