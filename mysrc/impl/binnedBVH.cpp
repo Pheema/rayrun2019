@@ -78,9 +78,9 @@ BinnedBVH::Build(const Scene& scene)
                 return ret;
             }();
 
-            const Vector3f centroid =
-              (vertexPositions[0] + vertexPositions[1] + vertexPositions[2]) /
-              3.0f;
+            const Vector3f centroid = bound.GetCentroid();
+            /*(vertexPositions[0] + vertexPositions[1] + vertexPositions[2]) /
+            3.0f;*/
 
             const PrecomputedPrimitiveData data = [&] {
                 PrecomputedPrimitiveData ret;
@@ -174,10 +174,9 @@ BinnedBVH::Build(const Scene& scene)
             const float l = primitiveData->centroid[widestAxis] -
                             binBoundary.lower[widestAxis];
 
-            static const float kAlmostOne = std::nextafter(1.0f, 0.0f);
-            const auto binID =
-              static_cast<int>(kNumBins * kAlmostOne * l / widestEdgeLength);
-            assert(binID >= 0);
+            const auto binID = static_cast<int>(
+              std::nextafter(kNumBins * l / widestEdgeLength, 0.0f));
+            assert(0 <= binID && binID < kNumBins);
             primitiveData->binID = binID;
         }
 
@@ -200,13 +199,8 @@ BinnedBVH::Build(const Scene& scene)
                 }
             }
 
-            if (binPartitionIndexInBestDiv == 0)
-            {
-                currentNode.SetLeaf(true);
-                continue;
-            }
-
-            if (binPartitionIndexInBestDiv == kNumBins)
+            if (binPartitionIndexInBestDiv == 0 ||
+                binPartitionIndexInBestDiv == kNumBins)
             {
                 currentNode.SetLeaf(true);
                 continue;
@@ -219,10 +213,10 @@ BinnedBVH::Build(const Scene& scene)
 
             for (auto iter = iterBegin; iter != iterEnd; iter++)
             {
-                const int primitiveID = *iter;
+                const uint32_t faceIndex = *iter;
 
                 const PrecomputedPrimitiveData& primitiveData =
-                  m_precomputedFaceData[primitiveID];
+                  m_precomputedFaceData[faceIndex];
 
                 const bool isInLeftNode =
                   (primitiveData.binID < binPartitionIndexInBestDiv);
@@ -267,16 +261,17 @@ BinnedBVH::Build(const Scene& scene)
             }
         }
     }
+
+    m_bvhNodes.shrink_to_fit();
 }
 
 std::optional<HitInfo>
 BinnedBVH::Intersect(const RayInternal& ray,
                      const Scene& scene,
                      float distMin,
-                     float distMax)
+                     float distMax) const
 {
     thread_local std::vector<uint32_t> bvhNodeIndexStack;
-    bvhNodeIndexStack.reserve(m_bvhNodes.size());
     bvhNodeIndexStack.clear();
     bvhNodeIndexStack.emplace_back(0);
 
@@ -287,9 +282,7 @@ BinnedBVH::Intersect(const RayInternal& ray,
     while (!bvhNodeIndexStack.empty())
     {
         // 葉ノードに対して
-        const auto currentNodeIndex =
-          bvhNodeIndexStack[bvhNodeIndexStack.size() - 1];
-
+        const uint32_t currentNodeIndex = bvhNodeIndexStack.back();
         bvhNodeIndexStack.pop_back();
         const BVHNode& currentNode = m_bvhNodes[currentNodeIndex];
 
@@ -353,6 +346,7 @@ BinnedBVH::Intersect(const RayInternal& ray,
         {
             const uint32_t leftChildIndex = currentNode.GetChildIndices()[0];
             const uint32_t rightChildIndex = currentNode.GetChildIndices()[1];
+            assert(0 < leftChildIndex && 0 < rightChildIndex);
 
             const float sqDistLeft =
               (m_bvhNodes[leftChildIndex].GetCentroid() - ray.o)
@@ -388,10 +382,10 @@ BinnedBVH::GetSAHCost(int binPartitionIndex, const BVHNode& currentNode) const
 
     for (auto iter = iterBegin; iter != iterEnd; iter++)
     {
-        const int primitiveID = *iter;
+        const uint32_t faceIndex = *iter;
 
         const PrecomputedPrimitiveData& primitiveData =
-          m_precomputedFaceData[primitiveID];
+          m_precomputedFaceData[faceIndex];
 
         const int primitiveBinID = primitiveData.binID;
         if (primitiveBinID < binPartitionIndex)

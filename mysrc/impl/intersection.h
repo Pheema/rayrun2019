@@ -4,7 +4,7 @@
 #include "rayInternal.h"
 #include <optional>
 
-std::optional<SimpleHitInfo>
+inline std::optional<SimpleHitInfo>
 IntersectRayTriangle(const Vector3f& v0,
                      const Vector3f& v1,
                      const Vector3f& v2,
@@ -46,4 +46,28 @@ IntersectRayTriangle(const Vector3f& v0,
         return h;
     }();
     return hitInfo;
+}
+
+inline Vector3f
+CalcShadingNormal(Vector3f pos,
+                  const Vector3f& v0,
+                  const Vector3f& v1,
+                  const Vector3f& v2,
+                  const Vector3f& n0,
+                  const Vector3f& n1,
+                  const Vector3f& n2)
+{
+    const Vector3f p = pos - v0;
+    const Vector3f e1 = v1 - v0;
+    const Vector3f e2 = v2 - v0;
+    const Vector3f crossEdges = Cross(e1, e2);
+
+    const float inv = 1.0f / crossEdges.SquaredLength();
+    const float weightE1 = Dot(crossEdges, Cross(e1, p)) * inv;
+    const float weightE2 = Dot(crossEdges, Cross(p, e2)) * inv;
+
+    const Vector3f shadingNormal =
+      weightE1 * (n1 - n0) + weightE2 * (n2 - n0) + n0;
+
+    return shadingNormal;
 }

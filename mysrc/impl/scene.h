@@ -17,8 +17,8 @@ public:
           const uint32_t* indices,
           size_t numFaces);
 
-    std::optional<ShadingInfo>
-    Intersect(const Ray& ray);
+    void
+    Intersect(Ray& ray) const;
 
     size_t
     GetNumFaces() const
@@ -31,9 +31,9 @@ public:
     {
         const auto indices = m_vertexIndicesInFace[faceIndex];
 
-        return { std::ref(m_vertexPositions[indices[0]]),
-                 std::ref(m_vertexPositions[indices[1]]),
-                 std::ref(m_vertexPositions[indices[2]]) };
+        return { std::cref(m_vertexPositions[indices[0]]),
+                 std::cref(m_vertexPositions[indices[1]]),
+                 std::cref(m_vertexPositions[indices[2]]) };
     }
 
 private:
@@ -42,6 +42,6 @@ private:
     std::vector<std::array<uint32_t, 3>>
       m_vertexIndicesInFace; // 面に対する各頂点のインデックス
     std::vector<std::array<uint32_t, 3>>
-      m_normalIndices; // 面に対する各法線のインデックス
+      m_normalIndicesInFace; // 面に対する各法線のインデックス
     BinnedBVH m_accel;
 };

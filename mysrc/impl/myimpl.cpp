@@ -42,19 +42,6 @@ intersect(Ray* rays, size_t numRay, [[maybe_unused]] bool hitany)
     for (size_t idxRay = 0; idxRay < numRay; idxRay++)
     {
         Ray& ray = rays[idxRay];
-        auto hitInfo = g_scene.Intersect(ray);
-
-        if (!hitInfo)
-        {
-            ray.isisect = false;
-            continue;
-        }
-
-        // const uint32_t idxFace = hitInfo->idxFace;
-
-        // #TODO: 交差した三角形の情報を元にして交差位置と法線を補間
-
-        // #TODO: Rayに交差判定の結果を収める
-        // ray = ~~~;
+        g_scene.Intersect(ray);
     }
 }

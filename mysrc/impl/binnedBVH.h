@@ -123,7 +123,7 @@ public:
     Intersect(const RayInternal& ray,
               const Scene& scene,
               float distMin,
-              float distMax);
+              float distMax) const;
 
 private:
     //!
@@ -133,7 +133,7 @@ private:
     GetSAHCost(int binPartitionIndex, const BVHNode& currentNode) const;
 
 private:
-    constexpr static int kNumBins = 4; //!< ビンの分割数
+    constexpr static int kNumBins = 16; //!< ビンの分割数
 
     std::vector<PrecomputedPrimitiveData>
       m_precomputedFaceData; //!< 各プリミティブに対して事前計算されたデータ

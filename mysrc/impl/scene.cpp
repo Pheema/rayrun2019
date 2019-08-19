@@ -1,5 +1,7 @@
 #include "scene.h"
 
+#include "intersection.h"
+
 void
 Scene::Build(const float* vertices,
              size_t numVerts,
@@ -31,41 +33,78 @@ Scene::Build(const float* vertices,
     // 頂点インデックス
     m_vertexIndicesInFace.clear();
     m_vertexIndicesInFace.resize(numFaces);
-    m_normalIndices.clear();
-    m_normalIndices.resize(numFaces);
+    m_normalIndicesInFace.clear();
+    m_normalIndicesInFace.resize(numFaces);
     for (size_t idxFace = 0; idxFace < numFaces; idxFace++)
     {
         const size_t offset = idxFace * 6;
         m_vertexIndicesInFace[idxFace] = { indices[offset + 0],
                                            indices[offset + 2],
                                            indices[offset + 4] };
-        m_normalIndices[idxFace] = { indices[offset + 1],
-                                     indices[offset + 3],
-                                     indices[offset + 5] };
+        m_normalIndicesInFace[idxFace] = { indices[offset + 1],
+                                           indices[offset + 3],
+                                           indices[offset + 5] };
     }
 
     m_accel = BinnedBVH();
     m_accel.Build(*this);
 }
 
-std::optional<ShadingInfo>
-Scene::Intersect(const Ray& ray)
+void
+Scene::Intersect(Ray& ray) const
 {
     const RayInternal rayInternal = [&] {
         RayInternal r{};
         r.o = Vector3f(ray.pos[0], ray.pos[1], ray.pos[2]);
         r.dir = Vector3f(ray.dir[0], ray.dir[1], ray.dir[2]);
+
+        if (ray.faceid >= 0)
+        {
+            r.lastFaceIndex = ray.faceid;
+        }
         return r;
     }();
 
-    // #TODO: std::optional<ShadingInfo> を返す
-    auto hitInfo = m_accel.Intersect(rayInternal, *this, ray.tnear, ray.tfar);
-    if (!hitInfo)
+    const auto hitInfo =
+      m_accel.Intersect(rayInternal, *this, ray.tnear, ray.tfar);
+    if (hitInfo)
     {
-        return std::nullopt;
-    }
+        ray.isisect = true;
 
-    ShadingInfo shadingInfo;
-    shadingInfo.position = rayInternal.o + rayInternal.dir * hitInfo->distance;
-    return shadingInfo;
+        const auto pos = rayInternal.o + rayInternal.dir * hitInfo->distance;
+        ray.isect[0] = pos.x;
+        ray.isect[1] = pos.y;
+        ray.isect[2] = pos.z;
+
+        {
+            const auto vertexIndices =
+              m_vertexIndicesInFace[hitInfo->faceIndex];
+            const auto normalIndices =
+              m_normalIndicesInFace[hitInfo->faceIndex];
+
+            auto verties = m_vertexPositions[hitInfo->faceIndex];
+            auto normals = m_vertexNormals[hitInfo->faceIndex];
+            const auto shadingNormal =
+              CalcShadingNormal(pos,
+                                m_vertexPositions[vertexIndices[0]],
+                                m_vertexPositions[vertexIndices[1]],
+                                m_vertexPositions[vertexIndices[2]],
+                                m_vertexNormals[normalIndices[0]],
+                                m_vertexNormals[normalIndices[1]],
+                                m_vertexNormals[normalIndices[2]]);
+
+            ray.ns[0] = shadingNormal.x;
+            ray.ns[1] = shadingNormal.y;
+            ray.ns[2] = shadingNormal.z;
+        }
+
+        ray.faceid = hitInfo->faceIndex;
+
+        return;
+    }
+    else
+    {
+        ray.isisect = false;
+        return;
+    }
 }

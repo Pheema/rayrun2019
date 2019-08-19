@@ -6,9 +6,9 @@ set(CMAKE_CONFIGURATION_TYPES
     "Debug;RelWithDebInfo;Release"
     CACHE STRING "" FORCE)
 
-add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
-add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
-add_compile_options($<$<C_COMPILER_ID:MSVC>:/utf-8>)
+if(MSVC)
+  add_compile_options(/MP /utf-8)
+endif()
 
 # ---- refimpl ----
 add_library(refimpl SHARED)
@@ -38,6 +38,18 @@ target_sources(myimpl
                "src/rayrun.hpp")
 target_include_directories(myimpl PRIVATE "src" INTERFACE "mysrc/impl")
 target_compile_features(myimpl PUBLIC cxx_std_17)
+
+if(MSVC)
+  target_compile_options(myimpl
+                         PRIVATE $<$<CONFIG:RelWithDebInfo>:
+                                 /fp:fast
+                                 /Oi
+                                 /arch:AVX2>
+                                 $<$<CONFIG:Release>:/MT
+                                 /Oi
+                                 /fp:fast
+                                 /arch:AVX2>)
+endif()
 
 # ---- rayrun ----
 add_executable(rayrun "src/main.cpp")
