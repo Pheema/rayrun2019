@@ -43,12 +43,21 @@ if(MSVC)
   target_compile_options(myimpl
                          PRIVATE $<$<CONFIG:RelWithDebInfo>:
                                  /fp:fast
-                                 /Oi
+                                 /GL
                                  /arch:AVX2>
-                                 $<$<CONFIG:Release>:/MT
-                                 /Oi
+                                 $<$<CONFIG:Release>:
+                                 /GL
                                  /fp:fast
                                  /arch:AVX2>)
+
+  target_link_options(myimpl
+                      PRIVATE
+                      $<$<CONFIG:RelWithDebInfo>:
+                      /LTCG
+                      >
+                      $<$<CONFIG:Release>:
+                      /LTCG
+                      >)
 endif()
 
 # ---- rayrun ----

@@ -40,8 +40,92 @@ private:
         {
         }
 
-        std::optional<SimpleHitInfo>
-        Intersect(const RayInternal& ray) const;
+        inline std::optional<SimpleHitInfo>
+        Intersect(const RayInternal& ray) const
+        {
+            float tMin = ((ray.hasPositiveDir[0] ? m_boundary.lower.x
+                                                 : m_boundary.upper.x) -
+                          ray.o.x) *
+                         ray.invDir.x;
+            float tMax = ((ray.hasPositiveDir[0] ? m_boundary.upper.x
+                                                 : m_boundary.lower.x) -
+                          ray.o.x) *
+                         ray.invDir.x;
+
+            {
+                const float tyMin =
+                  ((ray.hasPositiveDir[1] ? m_boundary.lower.y
+                                          : m_boundary.upper.y) -
+                   ray.o.y) *
+                  ray.invDir.y;
+                const float tyMax =
+                  ((ray.hasPositiveDir[1] ? m_boundary.upper.y
+                                          : m_boundary.lower.y) -
+                   ray.o.y) *
+                  ray.invDir.y;
+
+                if (tyMax < tMin || tMax < tyMin)
+                {
+                    return std::nullopt;
+                }
+
+                if (tMin < tyMin)
+                {
+                    tMin = tyMin;
+                }
+
+                if (tyMax < tMax)
+                {
+                    tMax = tyMax;
+                }
+            }
+
+            {
+                const float tzMin =
+                  ((ray.hasPositiveDir[2] ? m_boundary.lower.z
+                                          : m_boundary.upper.z) -
+                   ray.o.z) *
+                  ray.invDir.z;
+                const float tzMax =
+                  ((ray.hasPositiveDir[2] ? m_boundary.upper.z
+                                          : m_boundary.lower.z) -
+                   ray.o.z) *
+                  ray.invDir.z;
+
+                if (tzMax < tMin || tMax < tzMin)
+                {
+                    return std::nullopt;
+                }
+
+                if (tMin < tzMin)
+                {
+                    tMin = tzMin;
+                }
+
+                if (tzMax < tMax)
+                {
+                    tMax = tzMax;
+                }
+            }
+
+            float distance = std::numeric_limits<float>::max();
+            if (0.0f <= tMin && tMin < distance)
+            {
+                distance = tMin;
+            }
+
+            if (0.0f <= tMax && tMax < distance)
+            {
+                distance = tMax;
+            }
+
+            const SimpleHitInfo hitInfo = [&] {
+                SimpleHitInfo h;
+                h.distance = distance;
+                return h;
+            }();
+            return hitInfo;
+        }
 
         //! 子のノードインデックスを取得
         const std::array<uint32_t, 2>&
@@ -55,6 +139,18 @@ private:
         SetChildIndices(uint32_t leftChildIndex, uint32_t rightChildIndex)
         {
             m_childIndicies = { leftChildIndex, rightChildIndex };
+        }
+
+        void
+        SetCentroidDiff(const Vector3f& v)
+        {
+            m_childCentroidDiffL2R = v;
+        }
+
+        bool
+        IsLeftChildNodeNear(const Vector3f& dir) const
+        {
+            return Dot(m_childCentroidDiffL2R, dir) > 0;
         }
 
         //! 葉であるかどうかを設定する
@@ -100,6 +196,7 @@ private:
         std::array<uint32_t, 2> m_childIndicies{ 0, 0 };
         uint32_t m_indexBegin = 0;
         uint32_t m_indexEnd = 0;
+        Vector3f m_childCentroidDiffL2R;
         bool m_isLeaf = false;
     };
 
@@ -133,7 +230,7 @@ private:
     GetSAHCost(int binPartitionIndex, const BVHNode& currentNode) const;
 
 private:
-    constexpr static int kNumBins = 16; //!< ビンの分割数
+    constexpr static int kNumBins = 8; //!< ビンの分割数
 
     std::vector<PrecomputedPrimitiveData>
       m_precomputedFaceData; //!< 各プリミティブに対して事前計算されたデータ

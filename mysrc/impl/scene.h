@@ -36,6 +36,14 @@ public:
                  std::cref(m_vertexPositions[indices[2]]) };
     }
 
+    inline const Vector3f&
+    GetFaceVertice(uint32_t faceIndex, int i) const
+    {
+        assert(0 <= i && i < 3);
+        const auto indices = m_vertexIndicesInFace[faceIndex];
+        return m_vertexPositions[indices[i]];
+    }
+
 private:
     std::vector<Vector3f> m_vertexPositions;
     std::vector<Vector3f> m_vertexNormals;

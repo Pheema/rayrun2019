@@ -5,58 +5,6 @@
 #include <numeric>
 #include <stack>
 
-std::optional<SimpleHitInfo>
-BinnedBVH::BVHNode::Intersect(const RayInternal& ray) const
-{
-    const Vector3f invRayDir = Vector3f::One() / ray.dir;
-    const Vector3f t0 = (m_boundary.lower - ray.o) * invRayDir;
-    const Vector3f t1 = (m_boundary.upper - ray.o) * invRayDir;
-
-    constexpr int idxArray[] = { 0, 1, 2, 0 };
-
-    for (int cnt = 0; cnt < 3; cnt++)
-    {
-        const int axis0 = idxArray[cnt];
-        const int axis1 = idxArray[cnt + 1];
-
-        if (ray.dir[axis0] == 0 || ray.dir[axis1] == 0)
-        {
-            // 軸に平行なレイが入ってきた場合
-            continue;
-        }
-
-        const float tMinMax = std::max(std::min(t0[axis0], t1[axis0]),
-                                       std::min(t0[axis1], t1[axis1]));
-        const float tMaxMin = std::min(std::max(t0[axis0], t1[axis0]),
-                                       std::max(t0[axis1], t1[axis1]));
-        if (tMaxMin < tMinMax)
-        {
-            return std::nullopt;
-        }
-    }
-
-    float distance = std::numeric_limits<float>::max();
-    for (int axis = 0; axis < 3; ++axis)
-    {
-        if (t0[axis] > 0.0f)
-        {
-            distance = std::min(distance, t0[axis]);
-        }
-
-        if (t1[axis] > 0.0f)
-        {
-            distance = std::min(distance, t1[axis]);
-        }
-    }
-
-    const SimpleHitInfo hitInfo = [&] {
-        SimpleHitInfo h;
-        h.distance = distance;
-        return h;
-    }();
-    return hitInfo;
-}
-
 void
 BinnedBVH::Build(const Scene& scene)
 {
@@ -79,8 +27,6 @@ BinnedBVH::Build(const Scene& scene)
             }();
 
             const Vector3f centroid = bound.GetCentroid();
-            /*(vertexPositions[0] + vertexPositions[1] + vertexPositions[2]) /
-            3.0f;*/
 
             const PrecomputedPrimitiveData data = [&] {
                 PrecomputedPrimitiveData ret;
@@ -155,9 +101,9 @@ BinnedBVH::Build(const Scene& scene)
 
         const int widestAxis = binBoundary.GetWidestAxis();
 
-        std::sort(iterBegin, iterEnd, [this, widestAxis](int id0, int id1) {
-            return m_precomputedFaceData[id0].centroid[widestAxis] <
-                   m_precomputedFaceData[id1].centroid[widestAxis];
+        std::sort(iterBegin, iterEnd, [&](int faceIndex0, int faceIndex1) {
+            return m_precomputedFaceData[faceIndex0].centroid[widestAxis] <
+                   m_precomputedFaceData[faceIndex1].centroid[widestAxis];
         });
 
         // どのビンに属しているかを番号付け
@@ -166,10 +112,10 @@ BinnedBVH::Build(const Scene& scene)
 
         for (auto iter = iterBegin; iter != iterEnd; iter++)
         {
-            const int primitiveID = *iter;
+            const auto faceIndex = *iter;
 
             PrecomputedPrimitiveData* const primitiveData =
-              &m_precomputedFaceData[primitiveID];
+              &m_precomputedFaceData[faceIndex];
 
             const float l = primitiveData->centroid[widestAxis] -
                             binBoundary.lower[widestAxis];
@@ -185,7 +131,7 @@ BinnedBVH::Build(const Scene& scene)
         int numPrimsInLeftInBestDiv = 0;
         {
             float minCost = std::numeric_limits<float>::max();
-            for (int binPartitionIndex = 0; binPartitionIndex <= kNumBins;
+            for (int binPartitionIndex = 1; binPartitionIndex < kNumBins;
                  binPartitionIndex++)
             {
                 const auto [cost, numPrimsInLeft] =
@@ -197,13 +143,6 @@ BinnedBVH::Build(const Scene& scene)
                     binPartitionIndexInBestDiv = binPartitionIndex;
                     numPrimsInLeftInBestDiv = numPrimsInLeft;
                 }
-            }
-
-            if (binPartitionIndexInBestDiv == 0 ||
-                binPartitionIndexInBestDiv == kNumBins)
-            {
-                currentNode.SetLeaf(true);
-                continue;
             }
         }
 
@@ -257,6 +196,8 @@ BinnedBVH::Build(const Scene& scene)
                     rightChildIndex = index;
                 }
 
+                currentNode.SetCentroidDiff(rightBoundary.GetCentroid() -
+                                            leftBoundary.GetCentroid());
                 currentNode.SetChildIndices(leftChildIndex, rightChildIndex);
             }
         }
@@ -289,13 +230,13 @@ BinnedBVH::Intersect(const RayInternal& ray,
         const auto hitInfoNode = currentNode.Intersect(ray);
 
         // そもそもBVHノードに当たる軌道ではない
-        if (hitInfoNode == std::nullopt)
+        if (!hitInfoNode)
         {
             continue;
         }
 
         // 自ノードより手前で既に衝突している
-        if (finalHitInfo && currentNode.Contains(ray.o) == false)
+        if (finalHitInfo && !currentNode.Contains(ray.o))
         {
             if (finalHitInfo->distance < hitInfoNode->distance)
             {
@@ -311,16 +252,17 @@ BinnedBVH::Intersect(const RayInternal& ray,
             {
                 const uint32_t faceIndex = m_faceIndicies[i];
 
-                // 同じ面との再衝突を避ける
-                if (ray.lastFaceIndex == faceIndex)
-                {
-                    continue;
-                }
+                //// 同じ面との再衝突を避ける
+                // if (ray.lastFaceIndex == faceIndex)
+                //{
+                //    continue;
+                //}
 
-                const auto vertices = scene.GetFaceVertices(faceIndex);
-
-                const auto hitInfoGeometry = IntersectRayTriangle(
-                  vertices[0], vertices[1], vertices[2], ray);
+                const auto hitInfoGeometry =
+                  IntersectRayTriangle(scene.GetFaceVertice(faceIndex, 0),
+                                       scene.GetFaceVertice(faceIndex, 1),
+                                       scene.GetFaceVertice(faceIndex, 2),
+                                       ray);
                 if (hitInfoGeometry)
                 {
                     if (hitInfoGeometry->distance < distMin ||
@@ -348,22 +290,16 @@ BinnedBVH::Intersect(const RayInternal& ray,
             const uint32_t rightChildIndex = currentNode.GetChildIndices()[1];
             assert(0 < leftChildIndex && 0 < rightChildIndex);
 
-            const float sqDistLeft =
-              (m_bvhNodes[leftChildIndex].GetCentroid() - ray.o)
-                .SquaredLength();
-            const float sqDistRight =
-              (m_bvhNodes[rightChildIndex].GetCentroid() - ray.o)
-                .SquaredLength();
-
-            if (sqDistLeft < sqDistRight)
+            const bool isLeftNear = currentNode.IsLeftChildNodeNear(ray.dir);
+            if (isLeftNear)
             {
-                bvhNodeIndexStack.emplace_back(leftChildIndex);
                 bvhNodeIndexStack.emplace_back(rightChildIndex);
+                bvhNodeIndexStack.emplace_back(leftChildIndex);
             }
             else
             {
-                bvhNodeIndexStack.emplace_back(rightChildIndex);
                 bvhNodeIndexStack.emplace_back(leftChildIndex);
+                bvhNodeIndexStack.emplace_back(rightChildIndex);
             }
         }
     }
