@@ -109,14 +109,22 @@ private:
             }
 
             float distance = std::numeric_limits<float>::max();
-            if (0.0f <= tMin && tMin < distance)
+
+            const bool isNearCollisionValid = (0.0f <= tMin && tMin < distance);
+            if (isNearCollisionValid)
             {
                 distance = tMin;
             }
 
-            if (0.0f <= tMax && tMax < distance)
+            const bool isFarCollisionValid = (0.0f <= tMax && tMax < distance);
+            if (isFarCollisionValid)
             {
                 distance = tMax;
+            }
+
+            if (!(isNearCollisionValid || isFarCollisionValid))
+            {
+                return std::nullopt;
             }
 
             const SimpleHitInfo hitInfo = [&] {
@@ -183,6 +191,12 @@ private:
         GetCentroid() const
         {
             return m_boundary.GetCentroid();
+        }
+
+        const AABB&
+        GetBoundary() const
+        {
+            return m_boundary;
         }
 
         bool
