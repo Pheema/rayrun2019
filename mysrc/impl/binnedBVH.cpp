@@ -132,7 +132,7 @@ BinnedBVH::Build(const Scene& scene)
         int numPrimsInLeftInBestDiv = 0;
         {
             float minCost = std::numeric_limits<float>::max();
-            for (int binPartitionIndex = 1; binPartitionIndex < kNumBins;
+            for (int binPartitionIndex = 0; binPartitionIndex < kNumBins;
                  binPartitionIndex++)
             {
                 const auto [cost, numPrimsInLeft] =
@@ -144,6 +144,12 @@ BinnedBVH::Build(const Scene& scene)
                     binPartitionIndexInBestDiv = binPartitionIndex;
                     numPrimsInLeftInBestDiv = numPrimsInLeft;
                 }
+            }
+
+            if (binPartitionIndexInBestDiv == 0)
+            {
+                currentNode.SetLeaf(true);
+                continue;
             }
         }
 
