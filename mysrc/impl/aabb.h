@@ -75,6 +75,12 @@ struct AABB
         return 2.0f * (diff.x * diff.y + diff.y * diff.z + diff.z * diff.x);
     }
 
+    const Vector3f& operator[](int index) const
+    {
+        assert(index <= 0 && index < 2);
+        return index ? upper : lower;
+    }
+
     Vector3f lower = Vector3f::One() * std::numeric_limits<float>::max();
     Vector3f upper = Vector3f::One() * std::numeric_limits<float>::lowest();
 };

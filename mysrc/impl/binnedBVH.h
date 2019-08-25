@@ -40,29 +40,20 @@ private:
         {
         }
 
+        // Ref:
+        // https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection
         inline std::optional<SimpleHitInfo>
         Intersect(const RayInternal& ray) const
         {
-            float tMin = ((ray.hasPositiveDir[0] ? m_boundary.lower.x
-                                                 : m_boundary.upper.x) -
-                          ray.o.x) *
-                         ray.invDir.x;
-            float tMax = ((ray.hasPositiveDir[0] ? m_boundary.upper.x
-                                                 : m_boundary.lower.x) -
-                          ray.o.x) *
-                         ray.invDir.x;
+            float tMin = (m_boundary[ray.sign[0]].x - ray.o.x) * ray.invDir.x;
+            float tMax =
+              (m_boundary[1 - ray.sign[0]].x - ray.o.x) * ray.invDir.x;
 
             {
                 const float tyMin =
-                  ((ray.hasPositiveDir[1] ? m_boundary.lower.y
-                                          : m_boundary.upper.y) -
-                   ray.o.y) *
-                  ray.invDir.y;
+                  (m_boundary[ray.sign[1]].y - ray.o.y) * ray.invDir.y;
                 const float tyMax =
-                  ((ray.hasPositiveDir[1] ? m_boundary.upper.y
-                                          : m_boundary.lower.y) -
-                   ray.o.y) *
-                  ray.invDir.y;
+                  (m_boundary[1 - ray.sign[1]].y - ray.o.y) * ray.invDir.y;
 
                 if (tyMax < tMin || tMax < tyMin)
                 {
@@ -82,15 +73,9 @@ private:
 
             {
                 const float tzMin =
-                  ((ray.hasPositiveDir[2] ? m_boundary.lower.z
-                                          : m_boundary.upper.z) -
-                   ray.o.z) *
-                  ray.invDir.z;
+                  (m_boundary[ray.sign[2]].z - ray.o.z) * ray.invDir.z;
                 const float tzMax =
-                  ((ray.hasPositiveDir[2] ? m_boundary.upper.z
-                                          : m_boundary.lower.z) -
-                   ray.o.z) *
-                  ray.invDir.z;
+                  (m_boundary[1 - ray.sign[2]].z - ray.o.z) * ray.invDir.z;
 
                 if (tzMax < tMin || tMax < tzMin)
                 {

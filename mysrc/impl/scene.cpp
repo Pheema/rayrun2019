@@ -58,9 +58,9 @@ Scene::Intersect(Ray& ray) const
         r.o = Vector3f(ray.pos[0], ray.pos[1], ray.pos[2]);
         r.dir = Vector3f(ray.dir[0], ray.dir[1], ray.dir[2]);
         r.invDir = Vector3f::One() / r.dir;
-        r.hasPositiveDir[0] = (r.invDir[0] >= 0.0f);
-        r.hasPositiveDir[1] = (r.invDir[1] >= 0.0f);
-        r.hasPositiveDir[2] = (r.invDir[2] >= 0.0f);
+        r.sign[0] = (r.invDir[0] < 0.0f);
+        r.sign[1] = (r.invDir[1] < 0.0f);
+        r.sign[2] = (r.invDir[2] < 0.0f);
 
         if (ray.faceid >= 0)
         {
