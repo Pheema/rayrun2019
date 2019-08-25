@@ -34,9 +34,12 @@ target_sources(myimpl
                "mysrc/impl/intersection.cpp"
                "mysrc/impl/hitInfo.h"
                "mysrc/impl/rayInternal.h"
+               "mysrc/impl/visualDebugger.h"
+               "mysrc/impl/visualDebugger.cpp"
+               "thirdparty/rdb/rdb.hpp"
                PUBLIC
                "src/rayrun.hpp")
-target_include_directories(myimpl PRIVATE "src" INTERFACE "mysrc/impl")
+target_include_directories(myimpl PRIVATE "src" "thirdparty/rdb" INTERFACE "mysrc/impl")
 target_compile_features(myimpl PUBLIC cxx_std_17)
 
 if(MSVC)

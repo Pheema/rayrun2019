@@ -37,6 +37,12 @@ struct Vector3f
     Normalized() const;
 
     static constexpr Vector3f
+    Zero()
+    {
+        return Vector3f(0.0f, 0.0f, 0.0f);
+    }
+
+    static constexpr Vector3f
     One()
     {
         return Vector3f(1.0f, 1.0f, 1.0f);

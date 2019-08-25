@@ -2,6 +2,7 @@
 
 #include "intersection.h"
 #include "scene.h"
+#include "visualDebugger.h"
 #include <numeric>
 #include <stack>
 
@@ -212,12 +213,16 @@ BinnedBVH::Intersect(const RayInternal& ray,
                      float distMin,
                      float distMax) const
 {
+    // VisualDebuggerEx m_visualDebuggerEx;
+
     thread_local std::vector<uint32_t> bvhNodeIndexStack;
     bvhNodeIndexStack.clear();
     bvhNodeIndexStack.emplace_back(0);
 
     // ---- BVHのトラバーサル ----
     std::optional<HitInfo> finalHitInfo;
+
+    // m_visualDebuggerEx.DrawRay(ray.o, ray.dir);
 
     // 2つの子ノード又は子オブジェクトに対して
     while (!bvhNodeIndexStack.empty())
@@ -244,6 +249,11 @@ BinnedBVH::Intersect(const RayInternal& ray,
             }
         }
 
+        /*m_visualDebuggerEx.DrawPoint(ray.o + hitInfoNode->distance * ray.dir);
+
+        m_visualDebuggerEx.DrawCube(currentNode.GetBoundary().lower,
+                                    currentNode.GetBoundary().upper);*/
+
         if (currentNode.IsLeaf())
         {
             for (uint32_t i = currentNode.GetIndexBegin();
@@ -257,6 +267,11 @@ BinnedBVH::Intersect(const RayInternal& ray,
                 //{
                 //    continue;
                 //}
+
+                /*m_visualDebuggerEx.DrawTriangle(
+                  scene.GetFaceVertice(faceIndex, 0),
+                  scene.GetFaceVertice(faceIndex, 1),
+                  scene.GetFaceVertice(faceIndex, 2));*/
 
                 const auto hitInfoGeometry =
                   IntersectRayTriangle(scene.GetFaceVertice(faceIndex, 0),

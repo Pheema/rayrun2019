@@ -10,3 +10,6 @@
 [submodule "thirdparty/benchmark"]
 	path = thirdparty/benchmark
 	url = https://github.com/google/benchmark.git
+[submodule "thirdparty/rdb"]
+	path = thirdparty/rdb
+	url = https://github.com/qatnonoil/rdb.git
