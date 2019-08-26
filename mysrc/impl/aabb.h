@@ -77,7 +77,7 @@ struct AABB
 
     const Vector3f& operator[](int index) const
     {
-        assert(index <= 0 && index < 2);
+        assert(0 <= index && index < 2);
         return index ? upper : lower;
     }
 

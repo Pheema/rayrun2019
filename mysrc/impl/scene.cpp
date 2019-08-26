@@ -1,6 +1,7 @@
 #include "scene.h"
 
 #include "intersection.h"
+#include "visualDebugger.h"
 
 void
 Scene::Build(const float* vertices,
@@ -10,6 +11,8 @@ Scene::Build(const float* vertices,
              const uint32_t* indices,
              size_t numFaces)
 {
+    VisualDebuggerEx visualDebugger;
+
     // 頂点
     m_vertexPositions.clear();
     m_vertexPositions.resize(numVerts);
@@ -46,6 +49,11 @@ Scene::Build(const float* vertices,
                                            indices[offset + 5] };
     }
 
+    /* for (const auto& vertex : m_vertexPositions)
+     {
+         visualDebugger.DrawPoint(vertex);
+     }
+ */
     m_accel = BinnedBVH();
     m_accel.Build(*this);
 }
@@ -61,11 +69,6 @@ Scene::Intersect(Ray& ray) const
         r.sign[0] = (r.invDir[0] < 0.0f);
         r.sign[1] = (r.invDir[1] < 0.0f);
         r.sign[2] = (r.invDir[2] < 0.0f);
-
-        if (ray.faceid >= 0)
-        {
-            r.lastFaceIndex = ray.faceid;
-        }
         return r;
     }();
 
@@ -75,35 +78,54 @@ Scene::Intersect(Ray& ray) const
     {
         ray.isisect = true;
 
-        const auto pos = rayInternal.o + rayInternal.dir * hitInfo->distance;
+        const auto pos =
+          rayInternal.o + rayInternal.dir.Normalized() * hitInfo->distance;
         ray.isect[0] = pos.x;
         ray.isect[1] = pos.y;
         ray.isect[2] = pos.z;
-
+        ray.faceid = hitInfo->faceIndex;
         {
             const auto vertexIndices =
               m_vertexIndicesInFace[hitInfo->faceIndex];
-            const auto normalIndices =
-              m_normalIndicesInFace[hitInfo->faceIndex];
 
-            auto verties = m_vertexPositions[hitInfo->faceIndex];
-            auto normals = m_vertexNormals[hitInfo->faceIndex];
-            const auto shadingNormal =
-              CalcShadingNormal(pos,
-                                m_vertexPositions[vertexIndices[0]],
-                                m_vertexPositions[vertexIndices[1]],
-                                m_vertexPositions[vertexIndices[2]],
-                                m_vertexNormals[normalIndices[0]],
-                                m_vertexNormals[normalIndices[1]],
-                                m_vertexNormals[normalIndices[2]]);
+            if (!m_vertexNormals.empty())
+            {
+                const auto normalIndices =
+                  m_normalIndicesInFace[hitInfo->faceIndex];
 
-            ray.ns[0] = shadingNormal.x;
-            ray.ns[1] = shadingNormal.y;
-            ray.ns[2] = shadingNormal.z;
+                const auto shadingNormal =
+                  CalcShadingNormal(rayInternal,
+                                    m_vertexPositions[vertexIndices[0]],
+                                    m_vertexPositions[vertexIndices[1]],
+                                    m_vertexPositions[vertexIndices[2]],
+                                    m_vertexNormals[normalIndices[0]],
+                                    m_vertexNormals[normalIndices[1]],
+                                    m_vertexNormals[normalIndices[2]]);
+
+                const float sign = 1.0f;
+                // std::copysign(1.0f, -Dot(rayInternal.dir, shadingNormal));
+                ray.ns[0] = shadingNormal.x * sign;
+                ray.ns[1] = shadingNormal.y * sign;
+                ray.ns[2] = shadingNormal.z * sign;
+
+                // VisualDebuggerEx visualDebugger;
+                // visualDebugger.DrawPoint(pos);
+            }
+            else
+            {
+                const auto faceNormal =
+                  CalcFaceNormal(m_vertexPositions[vertexIndices[0]],
+                                 m_vertexPositions[vertexIndices[1]],
+                                 m_vertexPositions[vertexIndices[2]]);
+
+                const float sign =
+                  std::copysign(1.0f, -Dot(rayInternal.dir, faceNormal));
+
+                ray.ns[0] = faceNormal.x * sign;
+                ray.ns[1] = faceNormal.y * sign;
+                ray.ns[2] = faceNormal.z * sign;
+            }
         }
-
-        ray.faceid = hitInfo->faceIndex;
-
         return;
     }
     else
